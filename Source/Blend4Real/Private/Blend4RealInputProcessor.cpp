@@ -386,6 +386,16 @@ bool FBlend4RealInputProcessor::HandleKeyDownEvent(FSlateApplication& SlateApp, 
 	// Not transforming - check for action keys
 	const UBlend4RealSettings* Settings = UBlend4RealSettings::Get();
 
+	// Focus Selected (F) resets a relocated pivot, like Blender's View Selected.
+	// Not consumed, so the editor's own Focus command still runs.
+	if (Key == EKeys::F && ModMask == 0 && Blend4RealUtils::HasCustomPivot())
+	{
+		Blend4RealUtils::ClearCustomPivot();
+		GLevelEditorModeTools().SetPivotLocation(Blend4RealUtils::ComputeSelectionPivot().GetLocation(), false);
+		PivotVisualizationController->RefreshVisualization();
+		return false;
+	}
+
 	// Selection actions
 	if (UBlend4RealSettings::MatchesChord(Settings->DuplicateKey, InKeyEvent))
 	{
@@ -531,6 +541,13 @@ bool FBlend4RealInputProcessor::HandleMouseButtonDownEvent(FSlateApplication& Sl
 			return NavigationController->FocusOnMouseHit(FVector2D(MouseEvent.GetScreenSpacePosition()));
 		}
 		if (UBlend4RealSettings::MatchesChord(Settings->OrbitCameraKey, MouseEvent))
+		{
+			NavigationController->BeginOrbit(FVector2D(MouseEvent.GetScreenSpacePosition()));
+			// Return false to let Slate process mouse down normally (sets up capture state)
+			return false;
+		}
+		// Alt+MMB orbits too, matching Unreal's Alt+LMB
+		if (UBlend4RealSettings::MatchesChord(FInputChord(EModifierKey::Alt, EKeys::MiddleMouseButton), MouseEvent))
 		{
 			NavigationController->BeginOrbit(FVector2D(MouseEvent.GetScreenSpacePosition()));
 			// Return false to let Slate process mouse down normally (sets up capture state)
